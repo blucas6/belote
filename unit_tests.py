@@ -1,13 +1,10 @@
 import copy
 import belote
 
-def test1111(debug=False):
+def test1111():
     game = belote.Game()
     game.unit_testing = True
-    if debug:
-        game.print_level = belote.PrintLevel.INFO
-    else:
-        game.print_level = belote.PrintLevel.ERROR
+    game.print_level = belote.PrintLevel.ERROR
     game.trump = '♥'
     game.curr_turn = 0
     game.card_played = 0
@@ -31,22 +28,17 @@ def test1111(debug=False):
     ]
     score = [-2]
 
-    if debug:
+    if game.check_sets != ans or final_points != score:
         print('\nGame Check Table:')
         print(game.check_sets)
         print(f'Final Points: {final_points}')
-
-    if game.check_sets != ans or final_points != score:
         return False
     return True
 
-def test1112(debug=False):
+def test1112():
     game = belote.Game()
     game.unit_testing = True
-    if debug:
-        game.print_level = belote.PrintLevel.INFO
-    else:
-        game.print_level = belote.PrintLevel.ERROR
+    game.print_level = belote.PrintLevel.ERROR
     game.trump = '♥'
     game.lead = 'A♣'
     game.curr_turn = 3
@@ -93,24 +85,19 @@ def test1112(debug=False):
     ]
     score = [30, 26]
 
-    if debug:
+    if game.check_sets != ans or final_points != score:
         print('\nGame Check Table:')
         for s in game.check_sets:
             print(s)
         print(f'Final Points: {final_points}')
-
-    if game.check_sets != ans or final_points != score:
         return False
     return True
 
 
-def generate_hands(debug=False):
+def generate_hands():
     game = belote.Game()
     game.unit_testing = False
-    if debug:
-        game.print_level = belote.PrintLevel.INFO
-    else:
-        game.print_level = belote.PrintLevel.ERROR
+    game.print_level = belote.PrintLevel.ERROR
     game.curr_turn = 2
     game.card_played = 2
     game.round = 6
@@ -130,12 +117,79 @@ def generate_hands(debug=False):
             print(f'P{p.id} {p.handrounds}')
     return True
 
+def test_valid_sets_must_follow_suit():
+    game = belote.Game()
+    card_played = 3
+    turn = 3
+    trump = '♥'
+    lead = 'A♣'
+    table = ['A♣','Q♥','10♦','']
+    cards = ['10♦','9♣','8♥','7♠']
+    valid = game.get_valid_set(cards, lead, trump, table, turn, card_played)
+    ans = ['9♣']
 
-def run(func, debug=False):
-    print(f'{func.__name__} - {"Pass" if func(debug) else "Fail"}')
+    if ans != valid:
+        print(f'Expected {ans} got {valid}')
+        return False
+    return True
+
+def test_valid_sets_must_play_higher_trump():
+    game = belote.Game()
+    card_played = 3
+    turn = 3
+    trump = '♥'
+    lead = '7♥'
+    table = ['7♥','K♦','10♦','']
+    cards = ['10♦','9♣','8♥','Q♥']
+    valid = game.get_valid_set(cards, lead, trump, table, turn, card_played)
+    ans = ['Q♥']
+
+    if ans != valid:
+        print(f'Expected {ans} got {valid}')
+        return False
+    return True
+
+def test_valid_sets_partner_is_winning():
+    game = belote.Game()
+    card_played = 2
+    turn = 0
+    trump = '♥'
+    lead = '10♦'
+    table = ['','','10♦','K♦']
+    cards = ['7♣','J♣','8♣','Q♥']
+    valid = game.get_valid_set(cards, lead, trump, table, turn, card_played)
+    ans = cards
+
+    if ans != valid:
+        print(f'Expected {ans} got {valid}')
+        return False
+    return True
+
+def test_valid_sets_need_to_cut():
+    game = belote.Game()
+    card_played = 3
+    turn = 2
+    trump = '♥'
+    lead = 'K♦'
+    table = ['9♣','10♦','','K♦']
+    cards = ['J♣','7♣','8♣','Q♥']
+    valid = game.get_valid_set(cards, lead, trump, table, turn, card_played)
+    ans = ['Q♥']
+
+    if ans != valid:
+        print(f'Expected {ans} got {valid}')
+        return False
+    return True
+
+def run(func):
+    print(f'{"Pass" if func() else "Fail"} - {func.__name__}')
 
 if __name__ == '__main__':
-    run(test1111, False)
-    run(test1112, False)
+    run(test1111)
+    run(test1112)
     #run(generate_hands, True)
+    run(test_valid_sets_must_follow_suit)
+    run(test_valid_sets_must_play_higher_trump)
+    run(test_valid_sets_partner_is_winning)
+    run(test_valid_sets_need_to_cut)
 

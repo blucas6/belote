@@ -1,9 +1,9 @@
 import copy
-from curses import ERR
 import itertools
 import enum
 import time
 from datetime import timedelta
+import numpy
 
 class PrintLevel(enum.IntEnum):
     NONE = 0
@@ -43,6 +43,12 @@ def cardPoints(card, trump):
             return trumpDict[card[:1]]
         else:
             return pointDict[card[:1]]
+
+def get_card_suit(card):
+    if len(card) == 3:
+        return card[2]
+    else:
+        return card[1]
 
 class Table:
     def __init__(self):
@@ -92,28 +98,73 @@ class Game:
         if self.unit_testing:
             self.check_sets.append(list(cardset))
 
+    def get_valid_set(self, cards, lead, trump, table, turn, card_played):
+        if card_played == 0:
+            return cards
+        partner_played = ''
+        if turn == 0:
+            partner_played = table[2]
+        elif turn == 1:
+            partner_played = table[3]
+        elif turn == 2:
+            partner_played = table[0]
+        elif turn == 3:
+            partner_played = table[1]
+        else:
+            self.print(f'Sent invalid turn -> {turn}', print_level=PrintLevel.ERROR)
+            return cards
+        suits = [get_card_suit(card) for card in cards]
+        valid = []
+        lead_suit = get_card_suit(lead)
+        # can follow suit
+        if lead_suit in suits:
+            # can follow suit trump - need to play higher
+            if lead_suit == trump:
+                for ix,suit in enumerate(suits):
+                    if suit == lead_suit and cardPoints(cards[ix],trump) > cardPoints(lead,trump):
+                        valid.append(cards[ix])
+                # nothing higher
+                if not valid:
+                    valid = [cards[ix] for ix,suit in enumerate(suits) if suit == lead_suit]
+            # can follow suit
+            else:
+                valid = [cards[ix] for ix,suit in enumerate(suits) if suit == lead_suit]
+        else:
+            # check partner is winning
+            tp, wi = self.solveSet(trump, lead, table)
+            # partner is winning - no need to play trump
+            if table[wi] == partner_played:
+                valid = cards
+            # partner is not winning need to cut - play trump
+            elif trump in suits:
+                valid = [cards[ix] for ix,suit in enumerate(suits) if suit == trump]
+            # throw off
+            else:
+                valid = cards
+        return valid
+
     def solveSet(self, trump, lead, cards) -> tuple[list[int],int]:
         '''
         Given a card set with the lead and trump
         return the points per team and winning player
         '''
         if not lead:
-            print(f'Lead card is empty!')
+            self.print(f'Lead card is empty!', print_level=PrintLevel.ERROR)
+            return [0,0], -1
         totalPoints = 0
         for card in cards:
             if card:
                 totalPoints += cardPoints(card, trump)
-            else:
-                print(f'Empty card -> {cards}')
-                return [0,0],-1
         if not lead in cards:
-            print(f'Lead card {lead} is not in {cards}')
+            self.print(f'Lead card {lead} is not in {cards}', print_level=PrintLevel.ERROR)
             return [0,0],-1
         leadidx = cards.index(lead)
         cardtobeat = lead
         for i in range(len(cards)):
             idx = (leadidx + i) % len(cards)
             if cards[idx] == cardtobeat:
+                continue
+            if cards[idx] == '':
                 continue
             # current card is trump
             if cards[idx][-1] == trump: 
@@ -162,7 +213,10 @@ class Game:
                        print_level=PrintLevel.ERROR)
         curr_player = players[curr_turn]
         #print(f'P{curr_player.id} r:{round} t:{curr_turn} p:{card_played} {curr_player.handrounds}')
-        for cardtoplay in curr_player.handrounds[round]:
+        # get valid cards to try
+        valid_cards = self.get_valid_set(curr_player.handrounds[round], lead, trump,
+                                         table.cards[round], curr_turn, card_played)
+        for cardtoplay in valid_cards:
             if round + 1 < 8:
                 curr_player.handrounds[round+1] = copy.copy(curr_player.handrounds[round])
                 curr_player.handrounds[round+1].remove(cardtoplay)
@@ -288,8 +342,12 @@ class Game:
             # give each fake player their hand
             for ix,hand in enumerate(hands):
                 newplayers[ix].handrounds[rounds[ix]] = list(hand)
+            # filter out based on rules which cards are playable
+            valid_cards = self.get_valid_set(curr_player.handrounds[self.round],
+                                             newlead, self.trump, self.table.cards[self.round],
+                                             self.curr_turn, self.card_played)
             # test all cards in current player's hand
-            for card in curr_player.handrounds[self.round]:
+            for card in valid_cards:
                 card_points = self.base_calculate(curr_player, card, newlead, newround,
                                     newplayers)
                 total_card_points[card].extend(card_points)
@@ -418,7 +476,6 @@ class Game:
             self.players[ix % len(self.players)].hand.append(card)
 
 if __name__ == '__main__':
-    '''
     # Example set up
     game = Game()
     game.print_level = PrintLevel.INFO
@@ -439,8 +496,8 @@ if __name__ == '__main__':
     game.play_card(game.players[2], '9♠', game.round, game.table, game.deck_played)
     game.players[3].handrounds[game.round] = copy.copy(game.players[3].hand)
     game.play()
-    '''
 
+    '''
     game = Game()
     game.print_level = PrintLevel.INFO
     game.round = 4
@@ -453,3 +510,4 @@ if __name__ == '__main__':
     for p in game.players:
         p.handrounds[game.round] = copy.copy(p.hand)
     game.play()
+    '''
