@@ -45,6 +45,8 @@ def cardPoints(card, trump):
             return pointDict[card[:1]]
 
 def get_card_suit(card):
+    if not card:
+        return ''
     if len(card) == 3:
         return card[2]
     else:
@@ -120,16 +122,18 @@ class Game:
         if lead_suit in suits:
             # can follow suit trump - need to play higher
             if lead_suit == trump:
+                tp, wi = self.solveSet(trump, lead, table)
                 for ix,suit in enumerate(suits):
-                    if suit == lead_suit and cardPoints(cards[ix],trump) > cardPoints(lead,trump):
+                    if suit == lead_suit and cardPoints(cards[ix],trump) > cardPoints(table[wi],trump):
                         valid.append(cards[ix])
                 # nothing higher
                 if not valid:
                     valid = [cards[ix] for ix,suit in enumerate(suits) if suit == lead_suit]
-            # can follow suit
+            # can follow suit - not trump
             else:
                 valid = [cards[ix] for ix,suit in enumerate(suits) if suit == lead_suit]
         else:
+            # can't follow suit
             # check partner is winning
             tp, wi = self.solveSet(trump, lead, table)
             # partner is winning - no need to play trump
@@ -137,8 +141,21 @@ class Game:
                 valid = cards
             # partner is not winning need to cut - play trump
             elif trump in suits:
-                valid = [cards[ix] for ix,suit in enumerate(suits) if suit == trump]
-            # throw off
+                # check if trump has already been played
+                suits_table = [get_card_suit(card) for card in table]
+                # trump has been played - must play higher
+                if trump in suits_table:
+                    tp, wi = self.solveSet(trump, lead, table)
+                    for ix,suit in enumerate(suits):
+                        if suit == trump and cardPoints(cards[ix],trump) > cardPoints(table[wi],trump):
+                            valid.append(cards[ix])
+                    # nothing higher - play any trump
+                    if not valid:
+                        valid = [cards[ix] for ix,suit in enumerate(suits) if suit == trump]
+                # trump not played - play any trump
+                else:
+                    valid = [cards[ix] for ix,suit in enumerate(suits) if suit == trump]
+            # can't follow suit and can't cut - throw off
             else:
                 valid = cards
         return valid
@@ -401,7 +418,7 @@ class Game:
                    print_level=PrintLevel.INFO)
 
         # sum all possible points per card and average
-        final_points = [sum(points)/len(points) for card,points in total_card_points.items()]
+        final_points = [sum(points)/len(points) if points else 0 for card,points in total_card_points.items()]
         return final_points
 
     def start(self):
@@ -476,6 +493,7 @@ class Game:
             self.players[ix % len(self.players)].hand.append(card)
 
 if __name__ == '__main__':
+    '''
     # Example set up
     game = Game()
     game.print_level = PrintLevel.INFO
@@ -496,8 +514,8 @@ if __name__ == '__main__':
     game.play_card(game.players[2], '9♠', game.round, game.table, game.deck_played)
     game.players[3].handrounds[game.round] = copy.copy(game.players[3].hand)
     game.play()
-
     '''
+
     game = Game()
     game.print_level = PrintLevel.INFO
     game.round = 4
@@ -510,4 +528,3 @@ if __name__ == '__main__':
     for p in game.players:
         p.handrounds[game.round] = copy.copy(p.hand)
     game.play()
-    '''

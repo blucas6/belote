@@ -139,10 +139,10 @@ def test_valid_sets_must_play_higher_trump():
     turn = 3
     trump = '♥'
     lead = '7♥'
-    table = ['7♥','K♦','10♦','']
-    cards = ['10♦','9♣','8♥','Q♥']
+    table = ['7♥','K♦','Q♥','']
+    cards = ['10♦','9♣','8♥','10♥']
     valid = game.get_valid_set(cards, lead, trump, table, turn, card_played)
-    ans = ['Q♥']
+    ans = ['10♥']
 
     if ans != valid:
         print(f'Expected {ans} got {valid}')
@@ -181,6 +181,38 @@ def test_valid_sets_need_to_cut():
         return False
     return True
 
+def test_valid_sets_cut_higher_trump():
+    game = belote.Game()
+    card_played = 3
+    turn = 2
+    trump = '♥'
+    lead = 'K♦'
+    table = ['10♦','10♥','','K♦']
+    cards = ['J♣','7♣','A♥','Q♥']
+    valid = game.get_valid_set(cards, lead, trump, table, turn, card_played)
+    ans = ['A♥']
+
+    if ans != valid:
+        print(f'Expected {ans} got {valid}')
+        return False
+    return True
+
+def test_valid_sets_cut_no_higher_trump():
+    game = belote.Game()
+    card_played = 3
+    turn = 2
+    trump = '♥'
+    lead = 'K♦'
+    table = ['10♦','A♥','','K♦']
+    cards = ['J♣','7♣','10♥','Q♥']
+    valid = game.get_valid_set(cards, lead, trump, table, turn, card_played)
+    ans = ['10♥','Q♥']
+
+    if ans != valid:
+        print(f'Expected {ans} got {valid}')
+        return False
+    return True
+
 def run(func):
     print(f'{"Pass" if func() else "Fail"} - {func.__name__}')
 
@@ -192,4 +224,6 @@ if __name__ == '__main__':
     run(test_valid_sets_must_play_higher_trump)
     run(test_valid_sets_partner_is_winning)
     run(test_valid_sets_need_to_cut)
+    run(test_valid_sets_cut_higher_trump)
+    run(test_valid_sets_cut_no_higher_trump)
 
